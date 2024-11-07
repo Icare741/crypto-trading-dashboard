@@ -18,7 +18,7 @@ export class TradingDashboardComponent implements OnInit, OnDestroy {
   @ViewChild('chartCanvas') chartCanvas!: ElementRef;
 
   cryptos: CryptoData[] = [];
-  selectedCryptos: string[] = ['BTC', 'ETH'];
+  selectedCryptos: string[] = ['BTC'];
   chart: Chart | null = null;
   private cryptoSubscription?: Subscription;
   predictions: Prediction[] = [];
