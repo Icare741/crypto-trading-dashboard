@@ -114,19 +114,25 @@ export class TradingDashboardComponent implements OnInit, OnDestroy {
 
     const firstHistory = this.priceHistory.get(this.selectedCryptos[0]) || [];
     this.chart.data.labels = firstHistory.map(h => 
-      h.timestamp.toLocaleTimeString()
+      h.timestamp.toLocaleTimeString('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      })
     );
 
     this.chart.data.datasets = this.selectedCryptos.map(symbol => {
       const history = this.priceHistory.get(symbol) || [];
-      const initialPrice = history[0]?.price || 1;
+      
+      // Utiliser le premier prix non-nul comme référence
+      const initialPrice = history.find(h => h.price > 0)?.price || 1;
       
       let data;
       let label;
       
       if (this.isPercentageMode) {
-        data = history.map(h => (h.price / initialPrice) * 100);
-        label = `${symbol} (Prix initial: $${initialPrice.toFixed(2)})`;
+        // Calculer les variations en pourcentage par rapport au prix initial
+        data = history.map(h => ((h.price - initialPrice) / initialPrice) * 100);
+        label = `${symbol} (Base: $${typeof initialPrice === 'number' ? initialPrice.toFixed(2) : initialPrice})`;
       } else {
         data = history.map(h => h.price);
         label = symbol;
@@ -136,26 +142,26 @@ export class TradingDashboardComponent implements OnInit, OnDestroy {
         type: 'line' as const,
         label: label,
         data: data,
-        borderColor: this.getColorForCrypto(symbol), // Utiliser la couleur fixe
+        borderColor: this.getColorForCrypto(symbol),
         fill: false,
-        tension: 0.4
+        tension: 0.4,
+        pointRadius: 2,
+        pointHoverRadius: 5,
+        pointHitRadius: 10
       } as ChartDataset<'line', number[]>;
     });
 
     // Mettre à jour les options du graphique
-    if (this.chart.options?.scales) {
+    if (this.chart.options?.scales?.['y']) {
       this.chart.options.scales['y'] = {
-        beginAtZero: false,
+        beginAtZero: this.isPercentageMode,
         ticks: {
-          callback: (value) => this.isPercentageMode 
-            ? `${value}%` 
-            : `$${value}`
-        },
-        title: {
-          display: true,
-          text: this.isPercentageMode 
-            ? 'Variation par rapport au prix initial (%)' 
-            : 'Prix ($)'
+          callback: (value) => {
+            const numValue = Number(value);
+            return this.isPercentageMode 
+              ? `${numValue.toFixed(2)}%` 
+              : `$${numValue.toFixed(2)}`;
+          }
         }
       };
     }
@@ -170,6 +176,9 @@ export class TradingDashboardComponent implements OnInit, OnDestroy {
     } else {
       this.selectedCryptos.push(symbol);
     }
+    
+    // Changer automatiquement le mode selon le nombre de cryptos
+    this.isPercentageMode = this.selectedCryptos.length > 1;
     this.updateChart();
   }
 
@@ -249,10 +258,5 @@ export class TradingDashboardComponent implements OnInit, OnDestroy {
     this.cryptoService.getAlerts().subscribe(alerts => {
       this.activeAlerts = alerts;
     });
-  }
-
-  toggleChartMode() {
-    this.isPercentageMode = !this.isPercentageMode;
-    this.updateChart();
   }
 }
