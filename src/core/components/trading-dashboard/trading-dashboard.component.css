@@ -168,3 +168,53 @@
       grid-template-columns: 1fr;
     }
   }
+  
+  .crypto-volume,
+  .crypto-market-cap {
+    font-size: 0.875rem;
+    color: var(--text-color);
+    opacity: 0.8;
+  }
+  
+  .prediction-item,
+  .suggestion-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+  }
+  
+  .prediction-symbol,
+  .suggestion-symbol {
+    font-weight: 500;
+  }
+  
+  .prediction-value,
+  .suggestion-action {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .suggestion-reason {
+    font-size: 0.75rem;
+    opacity: 0.8;
+  }
+  
+  .alert-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .alert-item.warning {
+    background-color: rgba(236, 201, 75, 0.1);
+  }
+  
+  .alert-icon {
+    font-size: 1.25rem;
+  }

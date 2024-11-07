@@ -1,10 +1,13 @@
 import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { TradingDashboardComponent } from '../core/components/trading-dashboard/trading-dashboard.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet],
-  template: '<router-outlet></router-outlet>'
+  imports: [CommonModule, TradingDashboardComponent],
+  template: '<app-trading-dashboard></app-trading-dashboard>'
 })
-export class AppComponent {}
+export class AppComponent {
+  title = 'crypto-dashboard';
+}

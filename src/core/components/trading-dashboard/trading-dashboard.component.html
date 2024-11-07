@@ -26,19 +26,27 @@
             <img [src]="crypto.logo" [alt]="crypto.name" class="crypto-logo">
             <div class="crypto-info">
               <h3>{{ crypto.name }} ({{ crypto.symbol }})</h3>
-              <p class="crypto-price">{{ crypto.price }}$</p>
-              <p [ngClass]="{'positive': crypto.change > 0, 'negative': crypto.change <= 0}">
-                {{ crypto.change > 0 ? '+' : '' }}{{ crypto.change }}%
+              <p class="crypto-price">{{ crypto.price | number:'1.2-2' }}$</p>
+              <p [ngClass]="{'positive': crypto.change > 0, 'negative': crypto.change < 0}">
+                {{ crypto.change > 0 ? '+' : '' }}{{ crypto.change | number:'1.2-2' }}%
               </p>
+              <p class="crypto-volume">Vol: {{ crypto.volume }}</p>
+              <p class="crypto-market-cap">Cap: {{ crypto.marketCap }}</p>
             </div>
           </div>
         </div>
       </section>
   
-      <section class="alerts-section">
+      <section class="alerts-section" *ngIf="cryptos.length > 0">
         <h2 class="section-title">Alertes et Notifications</h2>
         <ul class="alert-list">
-          nul
+          <li *ngFor="let crypto of cryptos" class="alert-item" 
+              [ngClass]="{'warning': crypto.change > 5 || crypto.change < -5}">
+            <i class="alert-icon" [ngClass]="{'warning': crypto.change > 5 || crypto.change < -5}">
+              {{ crypto.change > 5 ? '⚠️' : crypto.change < -5 ? '⚠️' : 'ℹ️' }}
+            </i>
+            {{ crypto.symbol }}: {{ crypto.change > 5 ? 'Forte hausse' : crypto.change < -5 ? 'Forte baisse' : 'Stable' }}
+          </li>
         </ul>
       </section>
   
@@ -49,9 +57,10 @@
             <h3 class="predictions-subtitle">Tendances prévues</h3>
             <ul class="predictions-list">
               <li *ngFor="let prediction of predictions" class="prediction-item">
-                <span>{{ prediction.symbol }}</span>
-                <span [ngClass]="{'positive': prediction.trend === 'up', 'negative': prediction.trend === 'down'}">
-                  {{ prediction.trend === 'up' ? '▲' : '▼' }} {{ prediction.percentage }}%
+                <span class="prediction-symbol">{{ prediction.symbol }}</span>
+                <span [ngClass]="{'positive': prediction.trend === 'up', 'negative': prediction.trend === 'down'}"
+                      class="prediction-value">
+                  {{ prediction.trend === 'up' ? '▲' : '▼' }} {{ prediction.percentage | number:'1.2-2' }}%
                 </span>
               </li>
             </ul>
@@ -60,9 +69,11 @@
             <h3 class="predictions-subtitle">Suggestions de trades</h3>
             <ul class="predictions-list">
               <li *ngFor="let suggestion of tradeSuggestions" class="prediction-item">
-                <span>{{ suggestion.symbol }}</span>
-                <span [ngClass]="{'positive': suggestion.action === 'buy', 'negative': suggestion.action === 'sell'}">
+                <span class="suggestion-symbol">{{ suggestion.symbol }}</span>
+                <span [ngClass]="{'positive': suggestion.action === 'buy', 'negative': suggestion.action === 'sell'}"
+                      class="suggestion-action">
                   {{ suggestion.action | uppercase }}
+                  <small class="suggestion-reason">({{ suggestion.reason }})</small>
                 </span>
               </li>
             </ul>

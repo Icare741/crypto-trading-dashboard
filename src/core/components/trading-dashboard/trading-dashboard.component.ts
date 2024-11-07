@@ -1,123 +1,121 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Chart, ChartConfiguration } from 'chart.js/auto';
-
-interface CryptoData {
-  symbol: string;
-  name: string;
-  logo: string;
-  price: string;
-  change: number;
-  volume: string;
-  marketCap: string;
-}
-
-interface Alert {
-  id: number;
-  type: string;
-  message: string;
-}
-
-interface Prediction {
-  symbol: string;
-  trend: 'up' | 'down';
-  percentage: number;
-}
-
-interface TradeSuggestion {
-  symbol: string;
-  action: 'buy' | 'sell';
-}
+import { Chart, ChartConfiguration, ChartDataset } from 'chart.js/auto';
+import { CryptoService, CryptoData, Prediction, TradeSuggestion } from '../../services/crypto.service';
+import { Subscription } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-trading-dashboard',
   standalone: true,
-  imports: [
-    CommonModule
-  ],
+  imports: [CommonModule],
+  providers: [CryptoService],
   templateUrl: './trading-dashboard.component.html',
   styleUrl: './trading-dashboard.component.css'
 })
-export class TradingDashboardComponent implements OnInit{
+export class TradingDashboardComponent implements OnInit, OnDestroy {
   @ViewChild('chartCanvas') chartCanvas!: ElementRef;
 
-  cryptos: CryptoData[] = [
-    { symbol: 'BTC', name: 'Bitcoin', logo: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png', price: '51,234.78', change: 2.5, volume: '32.5B', marketCap: '978.2B' },
-    { symbol: 'ETH', name: 'Ethereum', logo: 'https://cryptologos.cc/logos/ethereum-eth-logo.png', price: '3,456.12', change: -0.8, volume: '18.7B', marketCap: '412.3B' },
-    { symbol: 'BNB', name: 'Binance Coin', logo: 'https://cryptologos.cc/logos/bnb-bnb-logo.png', price: '412.56', change: 1.2, volume: '2.1B', marketCap: '68.5B' },
-    { symbol: 'ADA', name: 'Cardano', logo: 'https://cryptologos.cc/logos/cardano-ada-logo.png', price: '1.23', change: 3.7, volume: '1.8B', marketCap: '39.2B' },
-    { symbol: 'SOL', name: 'Solana', logo: 'https://cryptologos.cc/logos/solana-sol-logo.png', price: '98.76', change: -2.1, volume: '1.5B', marketCap: '32.7B' },
-  ];
-
-  alerts: Alert[] = [
-    { id: 1, type: 'warning', message: 'BTC a dépassé le seuil de 50,000$' },
-    { id: 2, type: 'info', message: 'Nouveau protocole DeFi lancé sur Ethereum' },
-  ];
-
-  predictions: Prediction[] = [
-    { symbol: 'BTC', trend: 'up', percentage: 3.7 },
-    { symbol: 'ETH', trend: 'down', percentage: 1.5 },
-    { symbol: 'ADA', trend: 'up', percentage: 4.2 },
-  ];
-
-  tradeSuggestions: TradeSuggestion[] = [
-    { symbol: 'DOT', action: 'buy' },
-    { symbol: 'XRP', action: 'sell' },
-    { symbol: 'SOL', action: 'buy' },
-  ];
-
+  cryptos: CryptoData[] = [];
   selectedCryptos: string[] = ['BTC', 'ETH'];
   chart: Chart | null = null;
+  private cryptoSubscription?: Subscription;
+  predictions: Prediction[] = [];
+  tradeSuggestions: TradeSuggestion[] = [];
+  private priceHistory: Map<string, { price: number; timestamp: Date }[]> = new Map();
+  private readonly MAX_DATA_POINTS = 20; // Nombre maximum de points sur le graphique
 
-  constructor() {}
+  constructor(private cryptoService: CryptoService) {}
 
-  ngOnInit(): void {}
+  ngOnInit() {
+    this.cryptoSubscription = this.cryptoService.cryptos$.subscribe(
+      cryptos => {
+        this.cryptos = cryptos;
+        this.updatePredictions(cryptos);
+        this.updatePriceHistory(cryptos);
+        if (this.chart) {
+          this.updateChart();
+        }
+      }
+    );
+  }
 
   ngAfterViewInit() {
     this.createChart();
   }
 
+  ngOnDestroy() {
+    if (this.cryptoSubscription) {
+      this.cryptoSubscription.unsubscribe();
+    }
+  }
+
   createChart() {
+    if (!this.chartCanvas) return;
+
     const ctx = this.chartCanvas.nativeElement.getContext('2d');
-    
     const config: ChartConfiguration = {
       type: 'line',
       data: {
-        labels: ['1h', '2h', '3h', '4h', '5h', '6h', '7h', '8h'],
-        datasets: this.selectedCryptos.map(symbol => ({
-          label: symbol,
-          data: Array.from({length: 8}, () => Math.random() * 100),
-          borderColor: this.getRandomColor(),
-          fill: false
-        }))
+        labels: [],
+        datasets: []
       },
       options: {
         responsive: true,
         plugins: {
           legend: {
             position: 'top',
-          },
-          title: {
-            display: true,
-            text: 'Comparaison des prix des crypto-monnaies'
           }
+        },
+        scales: {
+          y: {
+            beginAtZero: false,
+            ticks: {
+              callback: (value) => `$${value}`
+            }
+          },
+          x: {
+            ticks: {
+              maxRotation: 45,
+              minRotation: 45
+            }
+          }
+        },
+        animation: {
+          duration: 0 // Désactiver les animations pour une meilleure performance
         }
       }
     };
 
     this.chart = new Chart(ctx, config);
+    this.updateChart();
   }
 
-  updateChart() {
-    if (this.chart) {
-      this.chart.data.datasets = this.selectedCryptos.map(symbol => ({
+  async updateChart() {
+    if (!this.chart) return;
+
+    // Obtenir les labels (timestamps) du premier crypto sélectionné
+    const firstHistory = this.priceHistory.get(this.selectedCryptos[0]) || [];
+    this.chart.data.labels = firstHistory.map(h => 
+      h.timestamp.toLocaleTimeString()
+    );
+
+    // Mettre à jour les datasets
+    this.chart.data.datasets = this.selectedCryptos.map(symbol => {
+      const history = this.priceHistory.get(symbol) || [];
+      const existingDataset = this.chart?.data.datasets?.find(ds => ds.label === symbol);
+      
+      return {
+        type: 'line' as const,
         label: symbol,
-        data: Array.from({length: 8}, () => Math.random() * 100),
-        borderColor: this.getRandomColor(),
-        fill: false
-      }));
-      this.chart.update();
-    }
+        data: history.map(h => h.price),
+        borderColor: existingDataset?.borderColor || this.getRandomColor(),
+        fill: false,
+        tension: 0.4
+      } as ChartDataset<'line', number[]>;
+    });
+
+    this.chart.update('none');
   }
 
   toggleCrypto(symbol: string) {
@@ -132,5 +130,52 @@ export class TradingDashboardComponent implements OnInit{
 
   getRandomColor() {
     return `rgb(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)})`;
+  }
+
+  private updatePredictions(cryptos: CryptoData[]) {
+    // Prédictions inchangées
+    this.predictions = cryptos.map(crypto => ({
+      symbol: crypto.symbol,
+      trend: crypto.change > 0 ? 'up' : 'down',
+      percentage: Math.abs(crypto.change)
+    }));
+
+    // Suggestions de trade avec le bon typage
+    this.tradeSuggestions = cryptos
+      .map(crypto => ({
+        symbol: crypto.symbol,
+        action: crypto.change > 2 
+          ? 'sell' as const 
+          : crypto.change < -2 
+          ? 'buy' as const 
+          : 'hold' as const,
+        reason: crypto.change > 2 
+          ? 'Suracheté' 
+          : crypto.change < -2 
+          ? 'Survendu' 
+          : 'Stable'
+      }))
+      .filter(suggestion => suggestion.action !== 'hold');
+  }
+
+  private updatePriceHistory(cryptos: CryptoData[]) {
+    const currentTime = new Date();
+    
+    cryptos.forEach(crypto => {
+      if (!this.priceHistory.has(crypto.symbol)) {
+        this.priceHistory.set(crypto.symbol, []);
+      }
+
+      const history = this.priceHistory.get(crypto.symbol)!;
+      history.push({
+        price: crypto.price,
+        timestamp: currentTime
+      });
+
+      // Garder seulement les MAX_DATA_POINTS derniers points
+      if (history.length > this.MAX_DATA_POINTS) {
+        history.shift();
+      }
+    });
   }
 }
