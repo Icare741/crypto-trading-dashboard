@@ -230,3 +230,25 @@
   .custom-alerts-section .section-title {
     margin-bottom: 1.5rem;
   }
+  
+  .chart-controls {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 1rem;
+  }
+  
+  .chart-mode-btn {
+    padding: 0.5rem 1rem;
+    background-color: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+  }
+  
+  .chart-mode-btn:hover,
+  .chart-mode-btn.active {
+    background-color: var(--primary-color);
+    color: var(--primary-text-color);
+  }

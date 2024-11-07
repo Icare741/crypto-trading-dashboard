@@ -26,6 +26,8 @@ export class TradingDashboardComponent implements OnInit, OnDestroy {
   private priceHistory: Map<string, { price: number; timestamp: Date }[]> = new Map();
   private readonly MAX_DATA_POINTS = 20; // Nombre maximum de points sur le graphique
   activeAlerts: CryptoAlert[] = [];
+  private readonly INITIAL_HISTORY_POINTS = 50; // Nombre de points historiques à précharger
+  isPercentageMode = false;
 
   constructor(private cryptoService: CryptoService) {}
 
@@ -33,8 +35,8 @@ export class TradingDashboardComponent implements OnInit, OnDestroy {
     this.cryptoSubscription = this.cryptoService.cryptos$.subscribe(
       cryptos => {
         this.cryptos = cryptos;
+        this.initializePriceHistory(cryptos);  // Initialiser l'historique
         this.updatePredictions(cryptos);
-        this.updatePriceHistory(cryptos);
         if (this.chart) {
           this.updateChart();
         }
@@ -96,26 +98,54 @@ export class TradingDashboardComponent implements OnInit, OnDestroy {
   async updateChart() {
     if (!this.chart) return;
 
-    // Obtenir les labels (timestamps) du premier crypto sélectionné
     const firstHistory = this.priceHistory.get(this.selectedCryptos[0]) || [];
     this.chart.data.labels = firstHistory.map(h => 
       h.timestamp.toLocaleTimeString()
     );
 
-    // Mettre à jour les datasets
     this.chart.data.datasets = this.selectedCryptos.map(symbol => {
       const history = this.priceHistory.get(symbol) || [];
       const existingDataset = this.chart?.data.datasets?.find(ds => ds.label === symbol);
+      const initialPrice = history[0]?.price || 1;
+      
+      let data;
+      let label;
+      
+      if (this.isPercentageMode) {
+        data = history.map(h => (h.price / initialPrice) * 100);
+        label = `${symbol} (Prix initial: $${initialPrice.toFixed(2)})`;
+      } else {
+        data = history.map(h => h.price);
+        label = symbol;
+      }
       
       return {
         type: 'line' as const,
-        label: symbol,
-        data: history.map(h => h.price),
+        label: label,
+        data: data,
         borderColor: existingDataset?.borderColor || this.getRandomColor(),
         fill: false,
         tension: 0.4
       } as ChartDataset<'line', number[]>;
     });
+
+    // Mettre à jour les options du graphique
+    if (this.chart.options?.scales) {
+      this.chart.options.scales['y'] = {
+        beginAtZero: false,
+        ticks: {
+          callback: (value) => this.isPercentageMode 
+            ? `${value}%` 
+            : `$${value}`
+        },
+        title: {
+          display: true,
+          text: this.isPercentageMode 
+            ? 'Variation par rapport au prix initial (%)' 
+            : 'Prix ($)'
+        }
+      };
+    }
 
     this.chart.update('none');
   }
@@ -160,21 +190,37 @@ export class TradingDashboardComponent implements OnInit, OnDestroy {
       .filter(suggestion => suggestion.action !== 'hold');
   }
 
-  private updatePriceHistory(cryptos: CryptoData[]) {
-    const currentTime = new Date();
+  private initializePriceHistory(cryptos: CryptoData[]) {
+    const now = new Date();
     
     cryptos.forEach(crypto => {
       if (!this.priceHistory.has(crypto.symbol)) {
-        this.priceHistory.set(crypto.symbol, []);
+        // Créer un historique simulé pour les dernières minutes
+        const history: { price: number; timestamp: Date }[] = [];
+        let lastPrice = crypto.price;
+        
+        for (let i = this.INITIAL_HISTORY_POINTS; i > 0; i--) {
+          const timestamp = new Date(now.getTime() - i * 60000); // -1 minute par point
+          // Simuler une variation de prix plus réaliste
+          const randomVariation = (Math.random() - 0.5) * 0.01; // ±0.5% variation
+          lastPrice = lastPrice * (1 + randomVariation);
+          
+          history.push({ 
+            price: lastPrice,
+            timestamp: timestamp 
+          });
+        }
+        
+        this.priceHistory.set(crypto.symbol, history);
       }
 
+      // Ajouter le prix actuel
       const history = this.priceHistory.get(crypto.symbol)!;
       history.push({
         price: crypto.price,
-        timestamp: currentTime
+        timestamp: now
       });
 
-      // Garder seulement les MAX_DATA_POINTS derniers points
       if (history.length > this.MAX_DATA_POINTS) {
         history.shift();
       }
@@ -185,5 +231,10 @@ export class TradingDashboardComponent implements OnInit, OnDestroy {
     this.cryptoService.getAlerts().subscribe(alerts => {
       this.activeAlerts = alerts;
     });
+  }
+
+  toggleChartMode() {
+    this.isPercentageMode = !this.isPercentageMode;
+    this.updateChart();
   }
 }

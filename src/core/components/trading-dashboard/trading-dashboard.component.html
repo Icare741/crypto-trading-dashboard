@@ -5,6 +5,13 @@
   
     <main class="main-content">
       <section class="chart-section">
+        <div class="chart-controls">
+          <button (click)="toggleChartMode()" 
+                  class="chart-mode-btn" 
+                  [class.active]="isPercentageMode">
+            {{ isPercentageMode ? 'Mode Valeur' : 'Mode Pourcentage' }}
+          </button>
+        </div>
         <div class="chart-container">
           <canvas #chartCanvas></canvas>
         </div>
