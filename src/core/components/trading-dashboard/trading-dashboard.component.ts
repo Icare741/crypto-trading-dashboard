@@ -1,14 +1,15 @@
 import { Component, OnInit, ViewChild, ElementRef, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Chart, ChartConfiguration, ChartDataset } from 'chart.js/auto';
-import { CryptoService, CryptoData, Prediction, TradeSuggestion } from '../../services/crypto.service';
+import { CryptoService, CryptoData, Prediction, TradeSuggestion, CryptoAlert } from '../../services/crypto.service';
 import { Subscription } from 'rxjs';
 import { firstValueFrom } from 'rxjs';
+import { AlertFormComponent } from '../alert-form/alert-form.component';
 
 @Component({
   selector: 'app-trading-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, AlertFormComponent],
   providers: [CryptoService],
   templateUrl: './trading-dashboard.component.html',
   styleUrl: './trading-dashboard.component.css'
@@ -24,6 +25,7 @@ export class TradingDashboardComponent implements OnInit, OnDestroy {
   tradeSuggestions: TradeSuggestion[] = [];
   private priceHistory: Map<string, { price: number; timestamp: Date }[]> = new Map();
   private readonly MAX_DATA_POINTS = 20; // Nombre maximum de points sur le graphique
+  activeAlerts: CryptoAlert[] = [];
 
   constructor(private cryptoService: CryptoService) {}
 
@@ -176,6 +178,12 @@ export class TradingDashboardComponent implements OnInit, OnDestroy {
       if (history.length > this.MAX_DATA_POINTS) {
         history.shift();
       }
+    });
+  }
+
+  loadAlerts() {
+    this.cryptoService.getAlerts().subscribe(alerts => {
+      this.activeAlerts = alerts;
     });
   }
 }

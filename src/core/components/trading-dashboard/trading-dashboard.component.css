@@ -218,3 +218,15 @@
   .alert-icon {
     font-size: 1.25rem;
   }
+  
+  .custom-alerts-section {
+    background-color: var(--card-background);
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  
+  .custom-alerts-section .section-title {
+    margin-bottom: 1.5rem;
+  }

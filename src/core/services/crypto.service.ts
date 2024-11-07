@@ -26,6 +26,16 @@ export interface TradeSuggestion {
   reason: string;
 }
 
+export interface CryptoAlert {
+  id?: number;
+  symbol: string;
+  threshold: number;
+  type: 'above' | 'below';
+  triggered: boolean;
+  createdAt?: Date;
+  triggeredAt?: Date;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -55,5 +65,17 @@ export class CryptoService {
 
   getPriceHistory(symbol: string): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/crypto/${symbol}/history`);
+  }
+
+  createAlert(alert: CryptoAlert): Observable<CryptoAlert> {
+    return this.http.post<CryptoAlert>(`${this.apiUrl}/alerts`, alert);
+  }
+
+  getAlerts(): Observable<CryptoAlert[]> {
+    return this.http.get<CryptoAlert[]>(`${this.apiUrl}/alerts`);
+  }
+
+  deleteAlert(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/alerts/${id}`);
   }
 } 

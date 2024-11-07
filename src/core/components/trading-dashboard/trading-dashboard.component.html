@@ -50,6 +50,14 @@
         </ul>
       </section>
   
+      <section class="custom-alerts-section">
+        <h2 class="section-title">Alertes personnalisées</h2>
+        <app-alert-form 
+          [cryptos]="cryptos"
+          (alertCreated)="loadAlerts()">
+        </app-alert-form>
+      </section>
+  
       <section class="predictions-section">
         <h2 class="section-title">Prédictions et Conseils</h2>
         <div class="predictions-grid">
