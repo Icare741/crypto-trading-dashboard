@@ -29,6 +29,20 @@ export class TradingDashboardComponent implements OnInit, OnDestroy {
   private readonly INITIAL_HISTORY_POINTS = 50; // Nombre de points historiques à précharger
   isPercentageMode = false;
 
+  // Ajouter une Map pour stocker les couleurs fixes
+  private cryptoColors: Map<string, string> = new Map([
+    ['BTC', '#FF9F40'],  // orange
+    ['ETH', '#36A2EB'],  // bleu
+    ['BNB', '#4BC0C0'],  // turquoise
+    ['XRP', '#FF6384'],  // rouge
+    ['SOL', '#9966FF'],  // violet
+    ['ADA', '#33CC99'],  // vert
+    ['DOT', '#FF99CC'],  // rose
+    ['AVAX', '#FFCE56'], // jaune
+    ['MATIC', '#4CAF50'], // vert foncé
+    ['LINK', '#9C27B0']  // violet foncé
+  ]);
+
   constructor(private cryptoService: CryptoService) {}
 
   ngOnInit() {
@@ -105,7 +119,6 @@ export class TradingDashboardComponent implements OnInit, OnDestroy {
 
     this.chart.data.datasets = this.selectedCryptos.map(symbol => {
       const history = this.priceHistory.get(symbol) || [];
-      const existingDataset = this.chart?.data.datasets?.find(ds => ds.label === symbol);
       const initialPrice = history[0]?.price || 1;
       
       let data;
@@ -123,7 +136,7 @@ export class TradingDashboardComponent implements OnInit, OnDestroy {
         type: 'line' as const,
         label: label,
         data: data,
-        borderColor: existingDataset?.borderColor || this.getRandomColor(),
+        borderColor: this.getColorForCrypto(symbol), // Utiliser la couleur fixe
         fill: false,
         tension: 0.4
       } as ChartDataset<'line', number[]>;
@@ -160,8 +173,13 @@ export class TradingDashboardComponent implements OnInit, OnDestroy {
     this.updateChart();
   }
 
-  getRandomColor() {
-    return `rgb(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)})`;
+  // Remplacer getRandomColor par getColorForCrypto
+  private getColorForCrypto(symbol: string): string {
+    if (!this.cryptoColors.has(symbol)) {
+      // Couleur par défaut si la crypto n'est pas dans la map
+      this.cryptoColors.set(symbol, '#808080');
+    }
+    return this.cryptoColors.get(symbol)!;
   }
 
   private updatePredictions(cryptos: CryptoData[]) {
